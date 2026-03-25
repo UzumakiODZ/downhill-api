@@ -1,5 +1,7 @@
 package main
 
+import _ "ariga.io/atlas-provider-gorm/gormschema"
+
 import (
 	"example/downhill-api/graph"
 	"log"

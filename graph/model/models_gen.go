@@ -2,25 +2,88 @@
 
 package model
 
+type Company struct {
+	ID          string          `json:"id"`
+	CompanyName string          `json:"companyName"`
+	Roles       []*Role         `json:"roles"`
+	Questions   []*QuestionBank `json:"questions"`
+}
+
+type CreateCompanyInput struct {
+	CompanyName string `json:"companyName"`
+}
+
+type CreatePostInput struct {
+	Title   *string `json:"title,omitempty"`
+	Content *string `json:"content,omitempty"`
+	UserID  string  `json:"userId"`
+}
+
+type CreateQuestionInput struct {
+	Question  *string `json:"question,omitempty"`
+	CompanyID string  `json:"companyId"`
+	Years     *int32  `json:"years,omitempty"`
+}
+
+type CreateRoleInput struct {
+	RoleName  *string  `json:"roleName,omitempty"`
+	Year      *int32   `json:"year,omitempty"`
+	CompanyID string   `json:"companyId"`
+	OfferType *string  `json:"offerType,omitempty"`
+	Cgpa      *float64 `json:"cgpa,omitempty"`
+	Other     *string  `json:"other,omitempty"`
+	Ctc       *float64 `json:"ctc,omitempty"`
+	Base      *float64 `json:"base,omitempty"`
+}
+
+type CreateUserInput struct {
+	Email    string `json:"email"`
+	RegID    string `json:"regID"`
+	Password string `json:"password"`
+}
+
 type Mutation struct {
 }
 
-type NewTodo struct {
-	Text   string `json:"text"`
-	UserID string `json:"userId"`
+type Post struct {
+	ID        string  `json:"id"`
+	Title     *string `json:"title,omitempty"`
+	Content   *string `json:"content,omitempty"`
+	UserID    string  `json:"userId"`
+	User      *User   `json:"user"`
+	CreatedAt *string `json:"createdAt,omitempty"`
 }
 
 type Query struct {
 }
 
-type Todo struct {
-	ID   string `json:"id"`
-	Text string `json:"text"`
-	Done bool   `json:"done"`
-	User *User  `json:"user"`
+type QuestionBank struct {
+	ID        string   `json:"id"`
+	Question  *string  `json:"question,omitempty"`
+	CompanyID string   `json:"companyId"`
+	Company   *Company `json:"company"`
+	Years     *int32   `json:"years,omitempty"`
+}
+
+type Role struct {
+	ID        string   `json:"id"`
+	RoleName  *string  `json:"roleName,omitempty"`
+	Year      *int32   `json:"year,omitempty"`
+	CompanyID string   `json:"companyId"`
+	Company   *Company `json:"company"`
+	OfferType *string  `json:"offerType,omitempty"`
+	Cgpa      *float64 `json:"cgpa,omitempty"`
+	Other     *string  `json:"other,omitempty"`
+	Ctc       *float64 `json:"ctc,omitempty"`
+	Base      *float64 `json:"base,omitempty"`
+	Hired     *int32   `json:"hired,omitempty"`
+	Converted *int32   `json:"converted,omitempty"`
 }
 
 type User struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID       string  `json:"id"`
+	Username string  `json:"username"`
+	Email    string  `json:"email"`
+	RegID    string  `json:"regID"`
+	Posts    []*Post `json:"posts"`
 }

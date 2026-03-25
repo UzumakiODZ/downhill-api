@@ -6,9 +6,15 @@ import (
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"github.com/joho/godotenv"
 )
 
 var DB *gorm.DB
+
+
+func init() {
+    godotenv.Load() 
+}
 
 func Connect() {
 	dsn := os.Getenv("DB_URL")
@@ -19,12 +25,6 @@ func Connect() {
 
 	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 
-	err = DB.AutoMigrate(
-		&Company{},
-		&Role{},
-		&QuestionBank{},
-		&Post{},
-	) 
 
 	if err != nil {
 		log.Fatalf("Failed to migrate: %v", err)
@@ -35,3 +35,4 @@ func Connect() {
 	}
 	log.Println("Database connection established")
 }
+

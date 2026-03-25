@@ -13,11 +13,13 @@ var User = struct {
 	Username field.String
 	Email    field.String
 	RegID    field.String
+	Password field.String
 }{
 	ID:       field.Number[uint]{}.WithColumn("id"),
 	Username: field.String{}.WithColumn("username"),
 	Email:    field.String{}.WithColumn("email"),
 	RegID:    field.String{}.WithColumn("reg_id"),
+	Password: field.String{}.WithColumn("password"),
 }
 
 var Company = struct {

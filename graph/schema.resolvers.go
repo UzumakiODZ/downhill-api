@@ -8,17 +8,251 @@ package graph
 import (
 	"context"
 	"example/downhill-api/graph/model"
+	"example/downhill-api/database"
 	"fmt"
+	"strconv"
 )
 
-// CreateTodo is the resolver for the createTodo field.
-func (r *mutationResolver) CreateTodo(ctx context.Context, input model.NewTodo) (*model.Todo, error) {
-	panic(fmt.Errorf("not implemented: CreateTodo - createTodo"))
+
+// CreateUser is the resolver for the createUser field.
+func (r *mutationResolver) CreateUser(ctx context.Context, input model.CreateUserInput) (*model.User, error) {
+	panic(fmt.Errorf("not implemented: CreateUser - createUser"))
 }
 
-// Todos is the resolver for the todos field.
-func (r *queryResolver) Todos(ctx context.Context) ([]*model.Todo, error) {
-	panic(fmt.Errorf("not implemented: Todos - todos"))
+// CreateCompany is the resolver for the createCompany field.
+func (r *mutationResolver) CreateCompany(ctx context.Context, input model.CreateCompanyInput) (*model.Company, error) {
+   
+    company := &database.Company{
+        CompanyName: input.CompanyName, 
+    }
+
+    if err := database.DB.Create(&company).Error; err != nil {
+        return nil, fmt.Errorf("failed to create company: %v", err)
+    }
+
+    return &model.Company{
+        ID:          fmt.Sprintf("%d", company.ID),
+        CompanyName: company.CompanyName,
+    }, nil
+}
+
+// CreateRole is the resolver for the createRole field.
+func (r *mutationResolver) CreateRole(ctx context.Context, input model.CreateRoleInput) (*model.Role, error) {
+
+	var year uint
+	var cgpa float64
+	var ctc float64
+	var base float64
+
+	if input.Year != nil {
+    	year = uint(*input.Year)
+	}
+
+	if(input.Cgpa != nil) {
+		cgpa = *input.Cgpa
+	}
+
+	if(input.Ctc != nil) {
+		ctc = *input.Ctc
+	}
+
+	if(input.Base != nil) {
+		base = *input.Base
+	}
+
+	companyIDInt, err := strconv.Atoi(input.CompanyID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid companyID")
+	}
+
+	role := &database.Role{
+		RoleName:  *input.RoleName,
+		Year: 	year,
+		CompanyID: uint(companyIDInt),
+		OfferType: *input.OfferType,
+		CGPA: cgpa,
+		Other: *input.Other,
+		CTC: ctc,
+		Base: base,
+	}
+
+	if err := database.DB.Create(&role).Error; err != nil {
+		return nil, fmt.Errorf("failed to create role: %v", err)
+	}
+
+	return &model.Role{
+		ID:        fmt.Sprintf("%d", role.ID),
+		RoleName: strPtr(role.RoleName),
+		Year: 	int32Ptr(role.Year),
+		CompanyID: fmt.Sprintf("%d", role.CompanyID),
+		OfferType: strPtr(role.OfferType),
+        Cgpa:      float64Ptr(role.CGPA),
+        Other:     strPtr(role.Other),
+        Ctc:       float64Ptr(role.CTC),
+        Base:      float64Ptr(role.Base),
+	}, nil
+}
+
+// CreateQuestion is the resolver for the createQuestion field.
+func (r *mutationResolver) CreateQuestion(ctx context.Context, input model.CreateQuestionInput) (*model.QuestionBank, error) {
+
+	if(input.Question == nil) {
+		return nil, fmt.Errorf("question cannot be null")
+	}
+	
+	question := &database.QuestionBank{
+		Question:  *input.Question,
+	}
+
+	if err := database.DB.Create(&question).Error; err != nil {
+		return nil, fmt.Errorf("failed to create question: %v", err)
+	}
+
+	return &model.QuestionBank{
+		ID:        fmt.Sprintf("%d", question.ID),
+		Question:  strPtr(question.Question),
+	}, nil
+}
+
+// CreatePost is the resolver for the createPost field.
+func (r *mutationResolver) CreatePost(ctx context.Context, input model.CreatePostInput) (*model.Post, error) {
+	post := &database.Post{
+		Title:   *input.Title,
+		Content: *input.Content,
+	}
+
+	if err := database.DB.Create(&post).Error; err != nil {
+		return nil, fmt.Errorf("failed to create post: %v", err)
+	}
+
+	return &model.Post{
+		ID:      fmt.Sprintf("%d", post.ID),
+		Title:   strPtr(post.Title),
+		Content: strPtr(post.Content),
+	}, nil
+
+}
+
+// DeletePost is the resolver for the deletePost field.
+func (r *mutationResolver) DeletePost(ctx context.Context, id string) (bool, error) {
+	post := &database.Post{}
+	if err := database.DB.First(post, id).Error; err != nil {
+		return false, fmt.Errorf("post not found: %v", err)
+	}
+
+	if err := database.DB.Delete(post).Error; err != nil {
+		return false, fmt.Errorf("failed to delete post: %v", err)
+	}
+
+	return true, nil
+}
+
+// GetUser is the resolver for the getUser field.
+func (r *queryResolver) GetUser(ctx context.Context, id string) (*model.User, error) {
+	user := &database.User{}
+	if err := database.DB.First(user, id).Error; err != nil {
+		return nil, fmt.Errorf("user not found: %v", err)
+	}
+
+	return &model.User{
+		ID:       fmt.Sprintf("%d", user.ID),
+		Username: user.Username,
+	}, nil
+}
+
+// GetAllCompanies is the resolver for the getAllCompanies field.
+func (r *queryResolver) GetAllCompanies(ctx context.Context) ([]*model.Company, error) {
+	companies := []database.Company{}
+	if err := database.DB.Find(&companies).Error; err != nil {
+		return nil, fmt.Errorf("failed to fetch companies: %v", err)
+	}
+
+	var result []*model.Company
+	for _, company := range companies {
+		result = append(result, &model.Company{
+			ID:          fmt.Sprintf("%d", company.ID),
+			CompanyName: company.CompanyName,
+		})
+	}
+
+	return result, nil
+}
+
+// GetRolesByCompany is the resolver for the getRolesByCompany field.
+func (r *queryResolver) GetRolesByCompany(ctx context.Context, companyID string) ([]*model.Role, error) {
+	roles := []database.Role{}
+	if err := database.DB.Where("company_id = ?", companyID).Find(&roles).Error; err != nil {
+		return nil, fmt.Errorf("failed to fetch roles: %v", err)
+	}
+
+	var result []*model.Role
+	for _, role := range roles {
+		result = append(result, &model.Role{
+			ID:          fmt.Sprintf("%d", role.ID),
+			RoleName:    strPtr(role.RoleName),
+			Year:          int32Ptr(role.Year),
+			CompanyID:   fmt.Sprintf("%d", role.ID),
+			OfferType:   strPtr(role.OfferType),
+			Cgpa:          float64Ptr(role.CGPA),
+			Other:         strPtr(role.Other),
+			Ctc:           float64Ptr(role.CTC),
+			Base:          float64Ptr(role.Base),
+		})
+	}
+
+	return result, nil
+}
+
+
+// GetQuestionsByCompany is the resolver for the getQuestionsByCompany field.
+func (r *queryResolver) GetQuestionsByCompany(ctx context.Context, companyID string) ([]*model.QuestionBank, error) {
+	questions := []database.QuestionBank{}
+	if err := database.DB.Where("company_id = ?", companyID).Find(&questions).Error; err != nil {
+		return nil, fmt.Errorf("failed to fetch questions: %v", err)
+	}
+
+	var result []*model.QuestionBank
+	for _, question := range questions {
+		result = append(result, &model.QuestionBank{
+			ID:        fmt.Sprintf("%d", question.ID),
+			Question:  strPtr(question.Question),
+		})
+	}
+
+	return result, nil
+}
+
+// GetPost is the resolver for the getPost field.
+func (r *queryResolver) GetPost(ctx context.Context, id string) (*model.Post, error) {
+	post := &database.Post{}
+	if err := database.DB.First(post, id).Error; err != nil {
+		return nil, fmt.Errorf("post not found: %v", err)
+	}
+
+	return &model.Post{
+		ID:      fmt.Sprintf("%d", post.ID),
+		Title:   strPtr(post.Title),
+		Content: strPtr(post.Content),
+	}, nil
+}
+
+// GetAllPosts is the resolver for the getAllPosts field.
+func (r *queryResolver) GetAllPosts(ctx context.Context) ([]*model.Post, error) {
+	posts := []database.Post{}
+	if err := database.DB.Find(&posts).Error; err != nil {
+		return nil, fmt.Errorf("failed to fetch posts: %v", err)
+	}
+
+	var result []*model.Post
+	for _, post := range posts {
+		result = append(result, &model.Post{
+			ID:      fmt.Sprintf("%d", post.ID),
+			Title:  strPtr(post.Title),
+			Content: strPtr(post.Content),
+		})
+	}
+
+	return result, nil
 }
 
 // Mutation returns MutationResolver implementation.
@@ -27,5 +261,24 @@ func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
 // Query returns QueryResolver implementation.
 func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
 
+func strPtr(s string) *string {
+    return &s
+}
+
+func uintPtr(u uint) *uint {
+	return &u
+}
+
+func float64Ptr(f float64) *float64 {
+	return &f
+}
+
+func int32Ptr(i uint) *int32 {
+    val := int32(i)
+    return &val
+}
+
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
+
+

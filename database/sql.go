@@ -7,6 +7,7 @@ type User struct {
 	Username string `gorm:"size:255;unique;not null"` 
 	Email    string `gorm:"size:255;unique;not null"`
 	RegID    string `gorm:"size:255;unique;not null"`
+	Password string `gorm:"size:255;not null"`
 }
 
 type Company struct { 
@@ -43,5 +44,7 @@ type Post struct {
 	Content   string    `gorm:"type:text"` 
 	UserID    uint
 	User      User      `gorm:"foreignKey:UserID;references:ID"`
+	CompanyID  uint
+	Company    Company   `gorm:"foreignKey:CompanyID;references:ID"`
 	CreatedAt time.Time
 }

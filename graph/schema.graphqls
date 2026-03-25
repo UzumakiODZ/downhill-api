@@ -1,28 +1,111 @@
-# GraphQL schema example
-#
-# https://gqlgen.com/getting-started/
-
-type Todo {
-  id: ID!
-  text: String!
-  done: Boolean!
-  user: User!
-}
+scalar DateTime
 
 type User {
   id: ID!
-  name: String!
+  username: String!
+  email: String!
+  regID: String!
+
+  posts: [Post!]!
+}
+
+type Company {
+  id: ID!
+  companyName: String!
+  
+  roles: [Role!]!
+  questions: [QuestionBank!]!
+}
+
+type Role {
+  id: ID!
+  roleName: String
+  year: Int
+  companyId: ID!
+  company: Company!
+  offerType: String
+  cgpa: Float
+  other: String
+  ctc: Float
+  base: Float
+  hired: Int
+  converted: Int
+}
+
+type QuestionBank {
+  id: ID!
+  question: String
+  companyId: ID!
+  company: Company!
+  years: Int
+}
+
+type Post {
+  id: ID!
+  title: String
+  content: String
+  userId: ID!
+  user: User!
+  createdAt: DateTime
+}
+
+type AuthPayload {
+  token: String
+  user: User
+}
+
+input CreateUserInput {
+  email: String!
+  regID: String!
+  password: String!
+}
+
+input CreateCompanyInput {
+  companyName: String!
+}
+
+input CreateRoleInput {
+  roleName: String
+  year: Int
+  companyId: ID!
+  offerType: String
+  cgpa: Float
+  other: String
+  ctc: Float
+  base: Float
+}
+
+input CreateQuestionInput {
+  question: String
+  companyId: ID!
+  years: Int
+}
+
+input CreatePostInput {
+  title: String
+  content: String
+  userId: ID!
 }
 
 type Query {
-  todos: [Todo!]!
-}
+  getUser(id: ID!): User
 
-input NewTodo {
-  text: String!
-  userId: String!
+  getAllCompanies: [Company!]!
+
+  getRolesByCompany(companyId: ID!): [Role!]!
+  getQuestionsByCompany(companyId: ID!): [QuestionBank!]!
+
+  getPost(id: ID!): Post
+  getAllPosts: [Post!]!
 }
 
 type Mutation {
-  createTodo(input: NewTodo!): Todo!
+  createUser(input: CreateUserInput!): User! :AuthPayload
+  createCompany(input: CreateCompanyInput!): Company!
+  createRole(input: CreateRoleInput!): Role!
+  createQuestion(input: CreateQuestionInput!): QuestionBank!
+  createPost(input: CreatePostInput!): Post!
+
+
+  deletePost(id: ID!): Boolean!
 }
