@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"ariga.io/atlas-provider-gorm/gormschema"
-	"example/downhill-api/database" 
+	"downhill-api/database"
 )
 
 func main() {

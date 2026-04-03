@@ -2,6 +2,11 @@
 
 package model
 
+type AuthPayload struct {
+	Token string `json:"token"`
+	User  *User  `json:"user"`
+}
+
 type Company struct {
 	ID          string          `json:"id"`
 	CompanyName string          `json:"companyName"`
@@ -38,7 +43,12 @@ type CreateRoleInput struct {
 
 type CreateUserInput struct {
 	Email    string `json:"email"`
-	RegID    string `json:"regID"`
+	RegID    string `json:"regId"`
+	Password string `json:"password"`
+}
+
+type LoginInput struct {
+	Username string `json:"username"`
 	Password string `json:"password"`
 }
 
@@ -85,5 +95,6 @@ type User struct {
 	Username string  `json:"username"`
 	Email    string  `json:"email"`
 	RegID    string  `json:"regID"`
+	Password string  `json:"password"`
 	Posts    []*Post `json:"posts"`
 }

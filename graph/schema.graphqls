@@ -5,6 +5,7 @@ type User {
   username: String!
   email: String!
   regID: String!
+  password: String!
 
   posts: [Post!]!
 }
@@ -45,18 +46,24 @@ type Post {
   title: String
   content: String
   userId: ID!
+  
   user: User!
   createdAt: DateTime
 }
 
 type AuthPayload {
-  token: String
-  user: User
+  token: String!
+  user: User!
 }
 
-input CreateUserInput {
+input CreateUserInput{
   email: String!
-  regID: String!
+  regId: String!
+  password: String!
+}
+
+input LoginInput{
+  username: String!
   password: String!
 }
 
@@ -88,7 +95,6 @@ input CreatePostInput {
 }
 
 type Query {
-  getUser(id: ID!): User
 
   getAllCompanies: [Company!]!
 
@@ -100,12 +106,16 @@ type Query {
 }
 
 type Mutation {
-  createUser(input: CreateUserInput!): User! :AuthPayload
+
+  createUser(input: CreateUserInput!): AuthPayload!
+  Login(input: LoginInput!): Boolean!
+  Logout: Boolean!
   createCompany(input: CreateCompanyInput!): Company!
   createRole(input: CreateRoleInput!): Role!
   createQuestion(input: CreateQuestionInput!): QuestionBank!
   createPost(input: CreatePostInput!): Post!
 
-
   deletePost(id: ID!): Boolean!
 }
+
+

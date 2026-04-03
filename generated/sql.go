@@ -3,7 +3,7 @@
 package generated
 
 import (
-	"example/downhill-api/database"
+	"downhill-api/database"
 
 	"gorm.io/cli/gorm/field"
 )
