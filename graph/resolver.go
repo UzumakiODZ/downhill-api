@@ -5,7 +5,17 @@ package graph
 // It serves as dependency injection for your app, add any dependencies you require
 // here.
 
-type Resolver struct{}
+import (
+	"os"
+	"time"
+
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/redis/go-redis/v9"
+)
+
+type Resolver struct {
+	RedisClient *redis.Client
+}
 
 // Helper functions for pointer conversion
 func strPtr(s string) *string {
@@ -23,7 +33,11 @@ func float64Ptr(f float64) *float64 {
 
 // createToken generates a JWT token for the given user ID
 func createToken(userID string) (string, error) {
-	// TODO: Implement proper JWT token generation
-	// For now, returning a simple token format
-	return userID + "_token", nil
+	claims := jwt.MapClaims{
+		"user_id": userID,
+		"exp":     jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString([]byte(os.Getenv("JWT_SECRET_KEY")))
 }

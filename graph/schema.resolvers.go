@@ -7,12 +7,20 @@ package graph
 
 import (
 	"context"
-	cmd "downhill-api/cmd/api"
+	"downhill-api/cmd/api"
 	"downhill-api/database"
 	"downhill-api/graph/model"
+	"encoding/json"
 	"fmt"
 	"strconv"
+	"time"
 )
+
+const (
+	redisSetWarning = "Warning: Failed to set cache in Redis:"
+	postKeyFormat   = "post:%s"
+)
+
 
 // CreateUser is the resolver for the createUser field.
 func (r *mutationResolver) CreateUser(ctx context.Context, input model.CreateUserInput) (*model.AuthPayload, error) {
@@ -105,6 +113,7 @@ func (r *mutationResolver) CreateRole(ctx context.Context, input model.CreateRol
 	var ctc float64
 	var base float64
 
+
 	if input.Year != nil {
 		year = uint(*input.Year)
 	}
@@ -141,6 +150,16 @@ func (r *mutationResolver) CreateRole(ctx context.Context, input model.CreateRol
 		return nil, fmt.Errorf("failed to create role: %v", err)
 	}
 
+	redisKey := fmt.Sprintf("role:%d", role.ID)
+
+	roleData, err := json.Marshal(role)
+	if err == nil {
+		err = r.RedisClient.Set(ctx, redisKey, roleData, 24*time.Hour).Err()
+		if err != nil {
+			fmt.Println(redisSetWarning, err)
+		}
+	}
+
 	return &model.Role{
 		ID:        fmt.Sprintf("%d", role.ID),
 		RoleName:  strPtr(role.RoleName),
@@ -168,6 +187,17 @@ func (r *mutationResolver) CreateQuestion(ctx context.Context, input model.Creat
 		return nil, fmt.Errorf("failed to create question: %v", err)
 	}
 
+	redisKey := fmt.Sprintf("question:%d", question.ID)
+
+	questionData, err := json.Marshal(question)
+
+	if err == nil {
+		err = r.RedisClient.Set(ctx, redisKey, questionData, 24*time.Hour).Err()
+		if err != nil {
+			fmt.Println(redisSetWarning, err)
+		}
+	}
+
 	return &model.QuestionBank{
 		ID:       fmt.Sprintf("%d", question.ID),
 		Question: strPtr(question.Question),
@@ -183,6 +213,17 @@ func (r *mutationResolver) CreatePost(ctx context.Context, input model.CreatePos
 
 	if err := database.DB.Create(&post).Error; err != nil {
 		return nil, fmt.Errorf("failed to create post: %v", err)
+	}
+
+	redisKey := fmt.Sprintf("post:%d", post.ID)
+
+	postData, err := json.Marshal(post)
+
+	if err == nil {
+		err = r.RedisClient.Set(ctx, redisKey, postData, 24*time.Hour).Err()
+		if err != nil {
+			fmt.Println(redisSetWarning, err)
+		}
 	}
 
 	return &model.Post{
@@ -204,12 +245,26 @@ func (r *mutationResolver) DeletePost(ctx context.Context, id string) (bool, err
 		return false, fmt.Errorf("failed to delete post: %v", err)
 	}
 
+	redisKey := fmt.Sprintf(postKeyFormat, id)
+	
+	r.RedisClient.Del(ctx, redisKey)
+
 	return true, nil
 }
 
 // GetAllCompanies is the resolver for the getAllCompanies field.
 func (r *queryResolver) GetAllCompanies(ctx context.Context) ([]*model.Company, error) {
+
+	if cachedCompanies, err := r.RedisClient.Get(ctx, "companies:all").Result(); err == nil {
+		var companies []*model.Company
+		if err := json.Unmarshal([]byte(cachedCompanies), &companies); err == nil {
+			fmt.Println("Cache hit for companies:all")
+			return companies, nil
+		}
+	}
+
 	companies := []database.Company{}
+
 	if err := database.DB.Find(&companies).Error; err != nil {
 		return nil, fmt.Errorf("failed to fetch companies: %v", err)
 	}
@@ -222,11 +277,32 @@ func (r *queryResolver) GetAllCompanies(ctx context.Context) ([]*model.Company, 
 		})
 	}
 
+	redisKey := "companies:all"
+
+	companiesData, err := json.Marshal(result)
+
+	if err == nil {
+		// Note: r.RedisClient.Set bhi ek error return karta hai, 
+		// usko silently ignore kar sakte ho ya log kar sakte ho.
+		err = r.RedisClient.Set(ctx, redisKey, companiesData, 24*time.Hour).Err()
+		if err != nil {
+			fmt.Println(redisSetWarning, err)
+		}
+	}
+
 	return result, nil
 }
 
 // GetRolesByCompany is the resolver for the getRolesByCompany field.
 func (r *queryResolver) GetRolesByCompany(ctx context.Context, companyID string) ([]*model.Role, error) {
+	
+	if cachedRoles, err := r.RedisClient.Get(ctx, fmt.Sprintf("roles:company:%s", companyID)).Result(); err == nil {
+		var roles []*model.Role
+		if err := json.Unmarshal([]byte(cachedRoles), &roles); err == nil {
+			return roles, nil
+		}
+	}
+
 	roles := []database.Role{}
 	if err := database.DB.Where("company_id = ?", companyID).Find(&roles).Error; err != nil {
 		return nil, fmt.Errorf("failed to fetch roles: %v", err)
@@ -247,11 +323,30 @@ func (r *queryResolver) GetRolesByCompany(ctx context.Context, companyID string)
 		})
 	}
 
+	redisKey := fmt.Sprintf("roles:company:%s", companyID)
+	
+	rolesData, err := json.Marshal(result)
+
+	if err == nil {
+		err = r.RedisClient.Set(ctx, redisKey, rolesData, 24*time.Hour).Err()
+		if err != nil {
+			fmt.Println(redisSetWarning, err)
+		}
+	}
+
 	return result, nil
 }
 
 // GetQuestionsByCompany is the resolver for the getQuestionsByCompany field.
 func (r *queryResolver) GetQuestionsByCompany(ctx context.Context, companyID string) ([]*model.QuestionBank, error) {
+
+	if cachedQuestions, err := r.RedisClient.Get(ctx, fmt.Sprintf("questions:company:%s", companyID)).Result(); err == nil {
+		var questions []*model.QuestionBank
+		if err := json.Unmarshal([]byte(cachedQuestions), &questions); err == nil {
+			return questions, nil
+		}
+	}
+
 	questions := []database.QuestionBank{}
 	if err := database.DB.Where("company_id = ?", companyID).Find(&questions).Error; err != nil {
 		return nil, fmt.Errorf("failed to fetch questions: %v", err)
@@ -265,14 +360,45 @@ func (r *queryResolver) GetQuestionsByCompany(ctx context.Context, companyID str
 		})
 	}
 
+	redisKey := fmt.Sprintf("questions:company:%s", companyID)
+	
+	questionsData, err := json.Marshal(result)
+
+	if err == nil {
+		err = r.RedisClient.Set(ctx, redisKey, questionsData, 24 * time.Hour).Err()
+		if err != nil {
+			fmt.Println(redisSetWarning, err)
+		}
+	}
+
 	return result, nil
 }
 
 // GetPost is the resolver for the getPost field.
 func (r *queryResolver) GetPost(ctx context.Context, id string) (*model.Post, error) {
+
+	if cachedPost, err := r.RedisClient.Get(ctx, fmt.Sprintf(postKeyFormat, id)).Result(); err == nil {
+		var post *model.Post
+		if err := json.Unmarshal([]byte(cachedPost), &post); err == nil {
+			return post, nil
+		}
+	}
+
 	post := &database.Post{}
+
 	if err := database.DB.First(post, id).Error; err != nil {
 		return nil, fmt.Errorf("post not found: %v", err)
+	}
+
+	redisKey := fmt.Sprintf(postKeyFormat, id)
+	
+	postData, err := json.Marshal(post)
+
+	if err == nil {
+		err = r.RedisClient.Set(ctx, redisKey, postData, 24 * time.Hour).Err()
+		if err != nil {
+			fmt.Println(redisSetWarning, err)
+		}
 	}
 
 	return &model.Post{
@@ -284,6 +410,14 @@ func (r *queryResolver) GetPost(ctx context.Context, id string) (*model.Post, er
 
 // GetAllPosts is the resolver for the getAllPosts field.
 func (r *queryResolver) GetAllPosts(ctx context.Context) ([]*model.Post, error) {
+
+	if cachedPosts, err := r.RedisClient.Get(ctx, "posts:all").Result(); err == nil {
+		var posts []*model.Post
+		if err := json.Unmarshal([]byte(cachedPosts), &posts); err == nil {
+			return posts, nil
+		}
+	}
+
 	posts := []database.Post{}
 	if err := database.DB.Find(&posts).Error; err != nil {
 		return nil, fmt.Errorf("failed to fetch posts: %v", err)
@@ -296,6 +430,17 @@ func (r *queryResolver) GetAllPosts(ctx context.Context) ([]*model.Post, error) 
 			Title:   strPtr(post.Title),
 			Content: strPtr(post.Content),
 		})
+	}
+
+	redisKey := "posts:all"
+
+	postsData, err := json.Marshal(result)
+
+	if err == nil {
+		err = r.RedisClient.Set(ctx, redisKey, postsData, 24 * time.Hour).Err()
+		if err != nil {
+			fmt.Println(redisSetWarning, err)
+		}
 	}
 
 	return result, nil

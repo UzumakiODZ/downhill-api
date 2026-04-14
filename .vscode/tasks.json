@@ -1,0 +1,40 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Test Build",
+			"type": "shell",
+			"command": "gcc -v; go env CGO_ENABLED; go build -o tmp/test.exe server.go; ./tmp/test.exe"
+		},
+		{
+			"label": "Test CGO Disabled",
+			"type": "shell",
+			"command": "$env:CGO_ENABLED=0; go build -o tmp/test.exe server.go; ./tmp/test.exe"
+		},
+		{
+			"label": "Kill Test",
+			"type": "shell",
+			"command": "Stop-Process -Name test -Force -ErrorAction SilentlyContinue"
+		},
+		{
+			"label": "Test CGO Cmd",
+			"type": "shell",
+			"command": "cmd.exe /c \"set CGO_ENABLED=0 && go build -o tmp/test.exe . && tmp\\test.exe\""
+		},
+		{
+			"label": "Test CMD 2",
+			"type": "shell",
+			"command": "cmd /c \"set CGO_ENABLED=0&& go build -o tmp/test.exe . && tmp\\test.exe\""
+		},
+		{
+			"label": "Run Air",
+			"type": "shell",
+			"command": "air"
+		},
+		{
+			"label": "Run Air 2",
+			"type": "shell",
+			"command": "air"
+		}
+	]
+}
