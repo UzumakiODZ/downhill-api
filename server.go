@@ -46,12 +46,15 @@ func main() {
 		port = defaultPort
 	}
 
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
-		Password: "",
-		DB:       0,
-		Protocol: 2,
-	})
+	rdb := redis.NewClient(&redis.Options{})
+	if redisURL := os.Getenv("REDIS_URL"); redisURL != "" {
+		opt, err := redis.ParseURL(redisURL)  
+		if err != nil {
+			log.Printf("Invalid REDIS_URL: %v", err)
+		}
+		rdb = redis.NewClient(opt)
+	}
+
 
 	ctx := context.Background()
 
