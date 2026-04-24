@@ -76,7 +76,7 @@ func main() {
 
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal("Error loading .env file")
+		log.Printf("Error loading .env file")
 	}
 
 	err = rdb.Set(ctx, "foo", "bar", 0).Err()
