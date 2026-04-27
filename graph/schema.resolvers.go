@@ -293,6 +293,36 @@ func (r *queryResolver) GetAllCompanies(ctx context.Context) ([]*model.Company, 
 	return result, nil
 }
 
+func(r *queryResolver) GetCompanyByID(ctx context.Context, id string) (*model.Company, error) {
+
+	if cachedCompany, err := r.RedisClient.Get(ctx, fmt.Sprintf("company:%s", id)).Result(); err == nil {
+		var company *model.Company
+		if err := json.Unmarshal([]byte(cachedCompany), &company); err == nil {
+			return company, nil
+		}
+	}
+
+	company := &database.Company{}
+	
+	if err := database.DB.First(company, id).Error; err != nil {
+		return nil, fmt.Errorf("company not found: %v", err)
+	}
+	redisKey := fmt.Sprintf("company:%s", id)
+
+	companyData, err := json.Marshal(company)
+
+	if err == nil {
+		err = r.RedisClient.Set(ctx, redisKey, companyData, 24*time.Hour).Err()
+		if err != nil {
+			fmt.Println(redisSetWarning, err)
+		}
+	}
+
+	return &model.Company{
+		CompanyName: company.CompanyName,
+	}, nil
+}
+
 // GetRolesByCompany is the resolver for the getRolesByCompany field.
 func (r *queryResolver) GetRolesByCompany(ctx context.Context, companyID string) ([]*model.Role, error) {
 	
