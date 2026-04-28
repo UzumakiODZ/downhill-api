@@ -74,11 +74,22 @@ func main() {
 	}))
 
 	corsHandler := cors.New(cors.Options{
-        AllowedOrigins:   []string{"https://downhill-lovat.vercel.app/"}, 
-        AllowedMethods:   []string{"GET", "POST", "OPTIONS"},
-        AllowedHeaders:   []string{"Accept", "Content-Type", "Authorization"},
-        AllowCredentials: true,
-    }).Handler
+		AllowedOrigins: []string{
+			"https://downhill-lovat.vercel.app",
+			"https://downhill-lovat.vercel.app/",  
+			"http://localhost:5173",
+		},
+		AllowedMethods: []string{"GET", "POST", "OPTIONS"},
+		AllowedHeaders: []string{
+			"Accept", 
+			"Content-Type",           
+			"Authorization",
+			"sec-ch-ua",              
+			"sec-ch-ua-mobile",
+			"sec-ch-ua-platform",
+		},
+		AllowCredentials: true,
+	}).Handler
 
 	router := chi.NewRouter()
     router.Use(corsHandler)  
