@@ -7,7 +7,7 @@ package graph
 
 import (
 	"context"
-	"downhill-api/cmd/api"
+	cmd "downhill-api/cmd/api"
 	"downhill-api/database"
 	"downhill-api/graph/model"
 	"encoding/json"
@@ -15,12 +15,6 @@ import (
 	"strconv"
 	"time"
 )
-
-const (
-	redisSetWarning = "Warning: Failed to set cache in Redis:"
-	postKeyFormat   = "post:%s"
-)
-
 
 // CreateUser is the resolver for the createUser field.
 func (r *mutationResolver) CreateUser(ctx context.Context, input model.CreateUserInput) (*model.AuthPayload, error) {
@@ -113,7 +107,6 @@ func (r *mutationResolver) CreateRole(ctx context.Context, input model.CreateRol
 	var ctc float64
 	var base float64
 
-
 	if input.Year != nil {
 		year = uint(*input.Year)
 	}
@@ -156,7 +149,7 @@ func (r *mutationResolver) CreateRole(ctx context.Context, input model.CreateRol
 	if err == nil {
 		err = r.RedisClient.Set(ctx, redisKey, roleData, 24*time.Hour).Err()
 		if err != nil {
-			fmt.Println(redisSetWarning, err)
+			fmt.Println(err)
 		}
 	}
 
@@ -194,7 +187,7 @@ func (r *mutationResolver) CreateQuestion(ctx context.Context, input model.Creat
 	if err == nil {
 		err = r.RedisClient.Set(ctx, redisKey, questionData, 24*time.Hour).Err()
 		if err != nil {
-			fmt.Println(redisSetWarning, err)
+			fmt.Println(err)
 		}
 	}
 
@@ -222,7 +215,7 @@ func (r *mutationResolver) CreatePost(ctx context.Context, input model.CreatePos
 	if err == nil {
 		err = r.RedisClient.Set(ctx, redisKey, postData, 24*time.Hour).Err()
 		if err != nil {
-			fmt.Println(redisSetWarning, err)
+			fmt.Println(err)
 		}
 	}
 
@@ -245,8 +238,8 @@ func (r *mutationResolver) DeletePost(ctx context.Context, id string) (bool, err
 		return false, fmt.Errorf("failed to delete post: %v", err)
 	}
 
-	redisKey := fmt.Sprintf(postKeyFormat, id)
-	
+	redisKey := fmt.Sprintf(id)
+
 	r.RedisClient.Del(ctx, redisKey)
 
 	return true, nil
@@ -254,7 +247,6 @@ func (r *mutationResolver) DeletePost(ctx context.Context, id string) (bool, err
 
 // GetAllCompanies is the resolver for the getAllCompanies field.
 func (r *queryResolver) GetAllCompanies(ctx context.Context) ([]*model.Company, error) {
-
 	if cachedCompanies, err := r.RedisClient.Get(ctx, "companies:all").Result(); err == nil {
 		var companies []*model.Company
 		if err := json.Unmarshal([]byte(cachedCompanies), &companies); err == nil {
@@ -282,50 +274,50 @@ func (r *queryResolver) GetAllCompanies(ctx context.Context) ([]*model.Company, 
 	companiesData, err := json.Marshal(result)
 
 	if err == nil {
-		// Note: r.RedisClient.Set bhi ek error return karta hai, 
+		// Note: r.RedisClient.Set bhi ek error return karta hai,
 		// usko silently ignore kar sakte ho ya log kar sakte ho.
 		err = r.RedisClient.Set(ctx, redisKey, companiesData, 24*time.Hour).Err()
 		if err != nil {
-			fmt.Println(redisSetWarning, err)
+			fmt.Println(err)
 		}
 	}
 
 	return result, nil
 }
 
-func(r *queryResolver) GetCompanyByID(ctx context.Context, id string) (*model.Company, error) {
+// GetCompanyByID is the resolver for the getCompanyByID field.
+func (r *queryResolver) GetCompanyByID(ctx context.Context, companyID string) (*model.Company, error) {
+	
+	redisKey := fmt.Sprintf("company:%s", companyID)
 
-	if cachedCompany, err := r.RedisClient.Get(ctx, fmt.Sprintf("company:%s", id)).Result(); err == nil {
-		var company *model.Company
+	if cachedCompany, err := r.RedisClient.Get(ctx, redisKey).Result(); err == nil {
+		var company model.Company
 		if err := json.Unmarshal([]byte(cachedCompany), &company); err == nil {
-			return company, nil
+			return &company, nil
 		}
 	}
 
-	company := &database.Company{}
-	
-	if err := database.DB.First(company, id).Error; err != nil {
+	dbCompany := &database.Company{}
+	if err := database.DB.First(dbCompany, companyID).Error; err != nil {
 		return nil, fmt.Errorf("company not found: %v", err)
 	}
-	redisKey := fmt.Sprintf("company:%s", id)
 
-	companyData, err := json.Marshal(company)
+	company := model.Company{
+		ID:          companyID,
+		CompanyName: dbCompany.CompanyName,
+	}
 
-	if err == nil {
-		err = r.RedisClient.Set(ctx, redisKey, companyData, 24*time.Hour).Err()
-		if err != nil {
-			fmt.Println(redisSetWarning, err)
+	if data, err := json.Marshal(company); err == nil {
+		if err := r.RedisClient.Set(ctx, redisKey, data, 24*time.Hour).Err(); err != nil {
+			fmt.Println("redis warning:", err)
 		}
 	}
 
-	return &model.Company{
-		CompanyName: company.CompanyName,
-	}, nil
+	return &company, nil
 }
 
 // GetRolesByCompany is the resolver for the getRolesByCompany field.
 func (r *queryResolver) GetRolesByCompany(ctx context.Context, companyID string) ([]*model.Role, error) {
-	
 	if cachedRoles, err := r.RedisClient.Get(ctx, fmt.Sprintf("roles:company:%s", companyID)).Result(); err == nil {
 		var roles []*model.Role
 		if err := json.Unmarshal([]byte(cachedRoles), &roles); err == nil {
@@ -354,13 +346,13 @@ func (r *queryResolver) GetRolesByCompany(ctx context.Context, companyID string)
 	}
 
 	redisKey := fmt.Sprintf("roles:company:%s", companyID)
-	
+
 	rolesData, err := json.Marshal(result)
 
 	if err == nil {
 		err = r.RedisClient.Set(ctx, redisKey, rolesData, 24*time.Hour).Err()
 		if err != nil {
-			fmt.Println(redisSetWarning, err)
+			fmt.Println(err)
 		}
 	}
 
@@ -369,7 +361,6 @@ func (r *queryResolver) GetRolesByCompany(ctx context.Context, companyID string)
 
 // GetQuestionsByCompany is the resolver for the getQuestionsByCompany field.
 func (r *queryResolver) GetQuestionsByCompany(ctx context.Context, companyID string) ([]*model.QuestionBank, error) {
-
 	if cachedQuestions, err := r.RedisClient.Get(ctx, fmt.Sprintf("questions:company:%s", companyID)).Result(); err == nil {
 		var questions []*model.QuestionBank
 		if err := json.Unmarshal([]byte(cachedQuestions), &questions); err == nil {
@@ -391,13 +382,13 @@ func (r *queryResolver) GetQuestionsByCompany(ctx context.Context, companyID str
 	}
 
 	redisKey := fmt.Sprintf("questions:company:%s", companyID)
-	
+
 	questionsData, err := json.Marshal(result)
 
 	if err == nil {
-		err = r.RedisClient.Set(ctx, redisKey, questionsData, 24 * time.Hour).Err()
+		err = r.RedisClient.Set(ctx, redisKey, questionsData, 24*time.Hour).Err()
 		if err != nil {
-			fmt.Println(redisSetWarning, err)
+			fmt.Println(err)
 		}
 	}
 
@@ -406,8 +397,7 @@ func (r *queryResolver) GetQuestionsByCompany(ctx context.Context, companyID str
 
 // GetPost is the resolver for the getPost field.
 func (r *queryResolver) GetPost(ctx context.Context, id string) (*model.Post, error) {
-
-	if cachedPost, err := r.RedisClient.Get(ctx, fmt.Sprintf(postKeyFormat, id)).Result(); err == nil {
+	if cachedPost, err := r.RedisClient.Get(ctx, fmt.Sprintf(id)).Result(); err == nil {
 		var post *model.Post
 		if err := json.Unmarshal([]byte(cachedPost), &post); err == nil {
 			return post, nil
@@ -420,14 +410,14 @@ func (r *queryResolver) GetPost(ctx context.Context, id string) (*model.Post, er
 		return nil, fmt.Errorf("post not found: %v", err)
 	}
 
-	redisKey := fmt.Sprintf(postKeyFormat, id)
-	
+	redisKey := fmt.Sprintf(id)
+
 	postData, err := json.Marshal(post)
 
 	if err == nil {
-		err = r.RedisClient.Set(ctx, redisKey, postData, 24 * time.Hour).Err()
+		err = r.RedisClient.Set(ctx, redisKey, postData, 24*time.Hour).Err()
 		if err != nil {
-			fmt.Println(redisSetWarning, err)
+			fmt.Println(err)
 		}
 	}
 
@@ -440,7 +430,6 @@ func (r *queryResolver) GetPost(ctx context.Context, id string) (*model.Post, er
 
 // GetAllPosts is the resolver for the getAllPosts field.
 func (r *queryResolver) GetAllPosts(ctx context.Context) ([]*model.Post, error) {
-
 	if cachedPosts, err := r.RedisClient.Get(ctx, "posts:all").Result(); err == nil {
 		var posts []*model.Post
 		if err := json.Unmarshal([]byte(cachedPosts), &posts); err == nil {
@@ -467,9 +456,9 @@ func (r *queryResolver) GetAllPosts(ctx context.Context) ([]*model.Post, error) 
 	postsData, err := json.Marshal(result)
 
 	if err == nil {
-		err = r.RedisClient.Set(ctx, redisKey, postsData, 24 * time.Hour).Err()
+		err = r.RedisClient.Set(ctx, redisKey, postsData, 24*time.Hour).Err()
 		if err != nil {
-			fmt.Println(redisSetWarning, err)
+			fmt.Println(err)
 		}
 	}
 
@@ -484,3 +473,4 @@ func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
 
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
+

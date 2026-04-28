@@ -97,7 +97,8 @@ input CreatePostInput {
 type Query {
 
   getAllCompanies: [Company!]!
-
+  getCompanyByID(companyId: ID!): Company!
+  
   getRolesByCompany(companyId: ID!): [Role!]!
   getQuestionsByCompany(companyId: ID!): [QuestionBank!]!
 

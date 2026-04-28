@@ -4,7 +4,6 @@ import (
 	"context"
 	"downhill-api/database"
 	"downhill-api/graph"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -21,6 +20,8 @@ import (
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/redis/go-redis/v9"
 	"github.com/vektah/gqlparser/v2/ast"
+	"github.com/go-chi/chi/v5"  
+    "github.com/rs/cors"
 )
 
 func graphqlHandler(srv *handler.Server) http.HandlerFunc {
@@ -38,30 +39,49 @@ func graphqlHandler(srv *handler.Server) http.HandlerFunc {
 }
 
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Printf("Error loading .env file")
+	}
 
 	const defaultPort = "8080"
+	const defaultRedisURL = "redis://127.0.0.1:6379/0"
 
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = defaultPort
 	}
 
-	rdb := redis.NewClient(&redis.Options{})
-	if redisURL := os.Getenv("REDIS_URL"); redisURL != "" {
-		opt, err := redis.ParseURL(redisURL)  
-		if err != nil {
-			log.Printf("Invalid REDIS_URL: %v", err)
-		}
-		rdb = redis.NewClient(opt)
+	redisURL := os.Getenv("REDIS_URL")
+	if redisURL == "" {
+		redisURL = defaultRedisURL
 	}
 
-
+	opt, err := redis.ParseURL(redisURL)
+	if err != nil {
+		log.Printf("Invalid REDIS_URL: %v. Falling back to %s", err, defaultRedisURL)
+		opt, _ = redis.ParseURL(defaultRedisURL)
+	}
+	rdb := redis.NewClient(opt)
+	defer func() {
+		_ = rdb.Close()
+	}()
 
 	ctx := context.Background()
 
 	srv := handler.NewDefaultServer(graph.NewExecutableSchema(graph.Config{
 		Resolvers: &graph.Resolver{RedisClient: rdb},
 	}))
+
+	corsHandler := cors.New(cors.Options{
+        AllowedOrigins:   []string{"https://downhill-lovat.vercel.app/"}, 
+        AllowedMethods:   []string{"GET", "POST", "OPTIONS"},
+        AllowedHeaders:   []string{"Accept", "Content-Type", "Authorization"},
+        AllowCredentials: true,
+    }).Handler
+
+	router := chi.NewRouter()
+    router.Use(corsHandler)  
 
 	srv.AddTransport(transport.Options{})
 	srv.AddTransport(transport.GET{})
@@ -75,23 +95,11 @@ func main() {
 		Cache: lru.New[string](100),
 	})
 
-	err := godotenv.Load()
-	if err != nil {
-		log.Printf("Error loading .env file")
+	if err := rdb.Ping(ctx).Err(); err != nil {
+		log.Printf("Redis not reachable (%v). Server will continue, but cache/session features may fail.", err)
+	} else {
+		log.Printf("Redis connected")
 	}
-
-	err = rdb.Set(ctx, "foo", "bar", 0).Err()
-
-	if err != nil {
-		panic(err)
-	}
-
-	val, err := rdb.Get(ctx, "foo").Result()
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Println("foo", val)
 
 	database.Connect()
 	if database.DB == nil {
@@ -103,7 +111,5 @@ func main() {
 
 	log.Printf("connect to http://localhost:%s/ for GraphQL playground", port)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
-
-	rdb.Close()
 
 }
