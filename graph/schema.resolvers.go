@@ -168,12 +168,19 @@ func (r *mutationResolver) CreateRole(ctx context.Context, input model.CreateRol
 
 // CreateQuestion is the resolver for the createQuestion field.
 func (r *mutationResolver) CreateQuestion(ctx context.Context, input model.CreateQuestionInput) (*model.QuestionBank, error) {
+	companyIDInt, err := strconv.Atoi(input.CompanyID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid companyID")
+	}
+
 	if input.Question == nil {
 		return nil, fmt.Errorf("question cannot be null")
 	}
 
 	question := &database.QuestionBank{
-		Question: *input.Question,
+		Question:  *input.Question,
+		CompanyID: uint(companyIDInt),
+		Years:     uint(*input.Years),
 	}
 
 	if err := database.DB.Create(&question).Error; err != nil {
@@ -199,9 +206,21 @@ func (r *mutationResolver) CreateQuestion(ctx context.Context, input model.Creat
 
 // CreatePost is the resolver for the createPost field.
 func (r *mutationResolver) CreatePost(ctx context.Context, input model.CreatePostInput) (*model.Post, error) {
+	companyIDInt, err := strconv.Atoi(input.CompanyID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid companyID")
+	}
+
+	uuidInt, err := strconv.Atoi(input.UserID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid uuid")
+	}
+
 	post := &database.Post{
-		Title:   *input.Title,
-		Content: *input.Content,
+		UserID:    uint(uuidInt),
+		CompanyID: uint(companyIDInt),
+		Title:     *input.Title,
+		Content:   *input.Content,
 	}
 
 	if err := database.DB.Create(&post).Error; err != nil {
@@ -287,7 +306,6 @@ func (r *queryResolver) GetAllCompanies(ctx context.Context) ([]*model.Company, 
 
 // GetCompanyByID is the resolver for the getCompanyByID field.
 func (r *queryResolver) GetCompanyByID(ctx context.Context, companyID string) (*model.Company, error) {
-	
 	redisKey := fmt.Sprintf("company:%s", companyID)
 
 	if cachedCompany, err := r.RedisClient.Get(ctx, redisKey).Result(); err == nil {
@@ -473,4 +491,3 @@ func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
 
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
-

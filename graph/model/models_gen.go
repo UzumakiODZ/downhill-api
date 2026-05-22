@@ -19,9 +19,10 @@ type CreateCompanyInput struct {
 }
 
 type CreatePostInput struct {
-	Title   *string `json:"title,omitempty"`
-	Content *string `json:"content,omitempty"`
-	UserID  string  `json:"userId"`
+	Title     *string `json:"title,omitempty"`
+	Content   *string `json:"content,omitempty"`
+	CompanyID string  `json:"companyId"`
+	UserID    string  `json:"userId"`
 }
 
 type CreateQuestionInput struct {

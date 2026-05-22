@@ -91,6 +91,7 @@ input CreateQuestionInput {
 input CreatePostInput {
   title: String
   content: String
+  companyId: ID!
   userId: ID!
 }
 
