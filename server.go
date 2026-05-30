@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"fmt"
 
 	_ "ariga.io/atlas-provider-gorm/gormschema"
 	"github.com/joho/godotenv"
@@ -18,8 +19,11 @@ import (
 	"github.com/99designs/gqlgen/graphql/handler/lru"
 	"github.com/99designs/gqlgen/graphql/handler/transport"
 	"github.com/99designs/gqlgen/graphql/playground"
-	"github.com/redis/go-redis/v9"
 	"github.com/vektah/gqlparser/v2/ast"
+
+	"github.com/redis/go-redis/v9"
+	"github.com/go-redis/redis_rate/v10"
+
 	"github.com/go-chi/chi/v5"  
     "github.com/rs/cors"
 )
@@ -53,8 +57,9 @@ func main() {
 	}
 
 	redisURL := os.Getenv("REDIS_URL")
-	if redisURL == "" {
+	if os.Getenv("APP_ENV") == "local" {
 		redisURL = defaultRedisURL
+		log.Printf("Local redis running")
 	}
 
 	opt, err := redis.ParseURL(redisURL)
@@ -117,8 +122,17 @@ func main() {
 		log.Fatal("Database connection failed")
 	}
 
+	//rate limiter
+	limiter := redis_rate.NewLimiter(rdb)
+	res, err := limiter.Allow(ctx, "", redis_rate.PerSecond(10))
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("allowed", res.Allowed, "remaining", res.Remaining)
+
 	router.Handle("/", playground.Handler("GraphQL playground", "/query"))
-	router.Handle("/query", srv)
+	router.Handle("/query", cmd.RateLimit(limiter)(srv))
 
 	log.Printf("connect to http://localhost:%s/ for GraphQL playground", port)
 	log.Fatal(http.ListenAndServe(":"+port, router))
