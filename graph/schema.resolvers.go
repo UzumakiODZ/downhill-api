@@ -264,6 +264,55 @@ func (r *mutationResolver) DeletePost(ctx context.Context, id string) (bool, err
 	return true, nil
 }
 
+// CreateComment is the resolver for the createComment field.
+func (r *mutationResolver) CreateComment(ctx context.Context, input model.CreateCommentInput) (*model.Comment, error) {
+	postIDInt, err := strconv.Atoi(input.PostID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid postID")
+	}
+
+	userIDInt, err := strconv.Atoi(input.UserID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid userID")
+	}
+
+	comment := &database.Comment{
+		Content: input.Content,
+		PostID:  uint(postIDInt),
+		UserID:  uint(userIDInt),
+	}
+
+	if err := database.DB.Create(&comment).Error; err != nil {
+		return nil, fmt.Errorf("failed to create comment: %v", err)
+	}
+
+	r.RedisClient.Del(ctx, fmt.Sprintf("comments:post:%d", comment.PostID))
+
+	return &model.Comment{
+		ID:      fmt.Sprintf("%d", comment.ID),
+		Content: strPtr(comment.Content),
+		PostID:  fmt.Sprintf("%d", comment.PostID),
+		UserID:  fmt.Sprintf("%d", comment.UserID),
+	}, nil
+}
+
+// DeleteComment is the resolver for the deleteComment field.
+func (r *mutationResolver) DeleteComment(ctx context.Context, id string) (bool, error) {
+	comment := &database.Comment{}
+
+	if err := database.DB.First(comment, id).Error; err != nil {
+		return false, fmt.Errorf("comment not found: %v", err)
+	}
+
+	if err := database.DB.Delete(comment).Error; err != nil {
+		return false, fmt.Errorf("failed to delete comment: %v", err)
+	}
+
+	r.RedisClient.Del(ctx, fmt.Sprintf("comments:post:%d", comment.PostID))
+
+	return true, nil
+}
+
 // GetAllCompanies is the resolver for the getAllCompanies field.
 func (r *queryResolver) GetAllCompanies(ctx context.Context) ([]*model.Company, error) {
 	if cachedCompanies, err := r.RedisClient.Get(ctx, "companies:all").Result(); err == nil {
@@ -478,6 +527,39 @@ func (r *queryResolver) GetAllPosts(ctx context.Context) ([]*model.Post, error) 
 		if err != nil {
 			fmt.Println(err)
 		}
+	}
+
+	return result, nil
+}
+
+// GetCommentsByPost is the resolver for the getCommentsByPost field.
+func (r *queryResolver) GetCommentsByPost(ctx context.Context, postID string) ([]*model.Comment, error) {
+	redisKey := fmt.Sprintf("comments:post:%s", postID)
+
+	if cached, err := r.RedisClient.Get(ctx, redisKey).Result(); err == nil {
+		var comments []*model.Comment
+		if err := json.Unmarshal([]byte(cached), &comments); err == nil {
+			return comments, nil
+		}
+	}
+
+	comments := []database.Comment{}
+	if err := database.DB.Where("post_id = ?", postID).Find(&comments).Error; err != nil {
+		return nil, fmt.Errorf("failed to fetch comments: %v", err)
+	}
+
+	var result []*model.Comment
+	for _, c := range comments {
+		result = append(result, &model.Comment{
+			ID:      fmt.Sprintf("%d", c.ID),
+			Content: strPtr(c.Content),
+			PostID:  fmt.Sprintf("%d", c.PostID),
+			UserID:  fmt.Sprintf("%d", c.UserID),
+		})
+	}
+
+	if data, err := json.Marshal(result); err == nil {
+		r.RedisClient.Set(ctx, redisKey, data, 24*time.Hour)
 	}
 
 	return result, nil

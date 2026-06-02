@@ -12,6 +12,7 @@ env "gorm" {
   
   # Change this line:
   dev = "postgres://postgres:mysecretpassword@127.0.0.1:5499/postgres?sslmode=disable"
+  url = "postgres://postgres:mysecretpassword@127.0.0.1:5499/postgres?sslmode=disable"
 
   schemas = ["public"]
   
