@@ -7,11 +7,27 @@ type AuthPayload struct {
 	User  *User  `json:"user"`
 }
 
+type Comment struct {
+	ID        string  `json:"id"`
+	Content   *string `json:"content,omitempty"`
+	PostID    string  `json:"postId"`
+	Post      *Post   `json:"post"`
+	UserID    string  `json:"userId"`
+	User      *User   `json:"user"`
+	CreatedAt *string `json:"createdAt,omitempty"`
+}
+
 type Company struct {
 	ID          string          `json:"id"`
 	CompanyName string          `json:"companyName"`
 	Roles       []*Role         `json:"roles"`
 	Questions   []*QuestionBank `json:"questions"`
+}
+
+type CreateCommentInput struct {
+	Content string `json:"content"`
+	PostID  string `json:"postId"`
+	UserID  string `json:"userId"`
 }
 
 type CreateCompanyInput struct {
@@ -57,12 +73,13 @@ type Mutation struct {
 }
 
 type Post struct {
-	ID        string  `json:"id"`
-	Title     *string `json:"title,omitempty"`
-	Content   *string `json:"content,omitempty"`
-	UserID    string  `json:"userId"`
-	User      *User   `json:"user"`
-	CreatedAt *string `json:"createdAt,omitempty"`
+	ID        string     `json:"id"`
+	Title     *string    `json:"title,omitempty"`
+	Content   *string    `json:"content,omitempty"`
+	UserID    string     `json:"userId"`
+	User      *User      `json:"user"`
+	CreatedAt *string    `json:"createdAt,omitempty"`
+	Comments  []*Comment `json:"comments"`
 }
 
 type Query struct {

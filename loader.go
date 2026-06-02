@@ -1,3 +1,5 @@
+//go:build ignore
+
 package main
 
 import (
@@ -9,7 +11,7 @@ import (
 	"ariga.io/atlas-provider-gorm/gormschema"
 )
 
-func printSchemaStatements() {
+func main() {
 
 	stmts, err := gormschema.New("postgres").Load(
 		&database.User{},
@@ -17,6 +19,7 @@ func printSchemaStatements() {
 		&database.Role{},
 		&database.QuestionBank{},
 		&database.Post{},
+		&database.Comment{},
 	)
 
 	if err != nil {
