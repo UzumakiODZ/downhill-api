@@ -73,6 +73,7 @@ type ComplexityRoot struct {
 
 	Post struct {
 		Comments  func(childComplexity int) int
+		CompanyID func(childComplexity int) int
 		Content   func(childComplexity int) int
 		CreatedAt func(childComplexity int) int
 		ID        func(childComplexity int) int
@@ -353,6 +354,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Post.Comments(childComplexity), true
+	case "Post.companyId":
+		if e.ComplexityRoot.Post.CompanyID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Post.CompanyID(childComplexity), true
 	case "Post.content":
 		if e.ComplexityRoot.Post.Content == nil {
 			break
@@ -1116,6 +1123,8 @@ func (ec *executionContext) fieldContext_Comment_post(_ context.Context, field g
 				return ec.fieldContext_Post_content(ctx, field)
 			case "userId":
 				return ec.fieldContext_Post_userId(ctx, field)
+			case "companyId":
+				return ec.fieldContext_Post_companyId(ctx, field)
 			case "user":
 				return ec.fieldContext_Post_user(ctx, field)
 			case "createdAt":
@@ -1705,6 +1714,8 @@ func (ec *executionContext) fieldContext_Mutation_createPost(ctx context.Context
 				return ec.fieldContext_Post_content(ctx, field)
 			case "userId":
 				return ec.fieldContext_Post_userId(ctx, field)
+			case "companyId":
+				return ec.fieldContext_Post_companyId(ctx, field)
 			case "user":
 				return ec.fieldContext_Post_user(ctx, field)
 			case "createdAt":
@@ -1972,6 +1983,35 @@ func (ec *executionContext) _Post_userId(ctx context.Context, field graphql.Coll
 }
 
 func (ec *executionContext) fieldContext_Post_userId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Post",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Post_companyId(ctx context.Context, field graphql.CollectedField, obj *model.Post) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Post_companyId,
+		func(ctx context.Context) (any, error) {
+			return obj.CompanyID, nil
+		},
+		nil,
+		ec.marshalNID2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Post_companyId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Post",
 		Field:      field,
@@ -2344,6 +2384,8 @@ func (ec *executionContext) fieldContext_Query_getPost(ctx context.Context, fiel
 				return ec.fieldContext_Post_content(ctx, field)
 			case "userId":
 				return ec.fieldContext_Post_userId(ctx, field)
+			case "companyId":
+				return ec.fieldContext_Post_companyId(ctx, field)
 			case "user":
 				return ec.fieldContext_Post_user(ctx, field)
 			case "createdAt":
@@ -2400,6 +2442,8 @@ func (ec *executionContext) fieldContext_Query_getAllPosts(_ context.Context, fi
 				return ec.fieldContext_Post_content(ctx, field)
 			case "userId":
 				return ec.fieldContext_Post_userId(ctx, field)
+			case "companyId":
+				return ec.fieldContext_Post_companyId(ctx, field)
 			case "user":
 				return ec.fieldContext_Post_user(ctx, field)
 			case "createdAt":
@@ -3268,6 +3312,8 @@ func (ec *executionContext) fieldContext_User_posts(_ context.Context, field gra
 				return ec.fieldContext_Post_content(ctx, field)
 			case "userId":
 				return ec.fieldContext_Post_userId(ctx, field)
+			case "companyId":
+				return ec.fieldContext_Post_companyId(ctx, field)
 			case "user":
 				return ec.fieldContext_Post_user(ctx, field)
 			case "createdAt":
@@ -5359,6 +5405,11 @@ func (ec *executionContext) _Post(ctx context.Context, sel ast.SelectionSet, obj
 			out.Values[i] = ec._Post_content(ctx, field, obj)
 		case "userId":
 			out.Values[i] = ec._Post_userId(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "companyId":
+			out.Values[i] = ec._Post_companyId(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}

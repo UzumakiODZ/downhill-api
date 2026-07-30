@@ -77,6 +77,7 @@ type Post struct {
 	Title     *string    `json:"title,omitempty"`
 	Content   *string    `json:"content,omitempty"`
 	UserID    string     `json:"userId"`
+	CompanyID string     `json:"companyId"`
 	User      *User      `json:"user"`
 	CreatedAt *string    `json:"createdAt,omitempty"`
 	Comments  []*Comment `json:"comments"`

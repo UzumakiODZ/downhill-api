@@ -46,6 +46,7 @@ type Post {
   title: String
   content: String
   userId: ID!
+  companyId: ID!
   
   user: User!
   createdAt: DateTime
