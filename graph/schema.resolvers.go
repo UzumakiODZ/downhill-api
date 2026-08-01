@@ -495,6 +495,45 @@ func (r *queryResolver) GetPost(ctx context.Context, id string) (*model.Post, er
 	}, nil
 }
 
+// GetPostByCompany is the resolver for the getPostByCompany field.
+func (r *queryResolver) GetPostByCompany(ctx context.Context, companyID string) ([]*model.Post, error) {
+	if cachedCompanyPosts, err := r.RedisClient.Get(ctx, "posts:company").Result(); err == nil {
+		var posts []*model.Post
+		if err := json.Unmarshal([]byte(cachedCompanyPosts), &posts); err == nil {
+			return posts, nil
+		}
+	}
+
+	var posts []database.Post
+
+	if err := database.DB.Where("company_id = ?", companyID).Find(&posts).Error; err != nil {
+		return nil, err
+	}
+
+	var result []*model.Post
+
+	for _, post := range posts {
+		result = append(result, &model.Post{
+			ID:      fmt.Sprintf("%d", post.ID),
+			Title:   strPtr(post.Title),
+			Content: strPtr(post.Content),
+		})
+	}
+
+	redisKey := "posts:company"
+
+	postsData, err := json.Marshal(result)
+
+	if err == nil {
+		err = r.RedisClient.Set(ctx, redisKey, postsData, 24*time.Hour).Err()
+		if err != nil {
+			fmt.Println(err)
+		}
+	}
+
+	return result, nil
+}
+
 // GetAllPosts is the resolver for the getAllPosts field.
 func (r *queryResolver) GetAllPosts(ctx context.Context) ([]*model.Post, error) {
 	if cachedPosts, err := r.RedisClient.Get(ctx, "posts:all").Result(); err == nil {
