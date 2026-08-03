@@ -128,7 +128,7 @@ type ComplexityRoot struct {
 
 type MutationResolver interface {
 	CreateUser(ctx context.Context, input model.CreateUserInput) (*model.AuthPayload, error)
-	Login(ctx context.Context, input model.LoginInput) (bool, error)
+	Login(ctx context.Context, input model.LoginInput) (*model.AuthPayload, error)
 	Logout(ctx context.Context) (bool, error)
 	CreateCompany(ctx context.Context, input model.CreateCompanyInput) (*model.Company, error)
 	CreateRole(ctx context.Context, input model.CreateRoleInput) (*model.Role, error)
@@ -1475,7 +1475,7 @@ func (ec *executionContext) _Mutation_Login(ctx context.Context, field graphql.C
 			return ec.Resolvers.Mutation().Login(ctx, fc.Args["input"].(model.LoginInput))
 		},
 		nil,
-		ec.marshalNBoolean2bool,
+		ec.marshalNAuthPayload2ᚖdownhillᚑapiᚋgraphᚋmodelᚐAuthPayload,
 		true,
 		true,
 	)
@@ -1488,7 +1488,13 @@ func (ec *executionContext) fieldContext_Mutation_Login(ctx context.Context, fie
 		IsMethod:   true,
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Boolean does not have child fields")
+			switch field.Name {
+			case "token":
+				return ec.fieldContext_AuthPayload_token(ctx, field)
+			case "user":
+				return ec.fieldContext_AuthPayload_user(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type AuthPayload", field.Name)
 		},
 	}
 	defer func() {

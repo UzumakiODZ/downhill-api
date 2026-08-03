@@ -58,24 +58,31 @@ func (r *mutationResolver) CreateUser(ctx context.Context, input model.CreateUse
 }
 
 // Login is the resolver for the Login field.
-func (r *mutationResolver) Login(ctx context.Context, input model.LoginInput) (bool, error) {
+func (r *mutationResolver) Login(ctx context.Context, input model.LoginInput) (*model.AuthPayload, error) {
 	user := &database.User{}
 
 	if err := database.DB.Where("username = ?", input.Username).First(user).Error; err != nil {
-		return false, fmt.Errorf("user not found")
+		return nil, fmt.Errorf("user not found")
 	}
 
 	if !cmd.CheckPasswordHash(input.Password, user.Password) {
-		return false, fmt.Errorf("invalid password")
+		return nil, fmt.Errorf("invalid password")
 	}
 
 	token, err := createToken(fmt.Sprintf("%d", user.ID))
 	if err != nil {
-		return false, fmt.Errorf("failed to create token: %v", err)
+		return nil, fmt.Errorf("failed to create token: %v", err)
 	}
 
 	ctx = context.WithValue(ctx, "authToken", token)
-	return true, nil
+
+	return &model.AuthPayload{
+		Token: token,
+		User: &model.User{
+			ID:       fmt.Sprintf("%d", user.ID),
+			Username: user.Username,
+		},
+	}, nil
 }
 
 // Logout is the resolver for the Logout field.
