@@ -150,6 +150,8 @@ func (r *mutationResolver) CreateRole(ctx context.Context, input model.CreateRol
 		return nil, fmt.Errorf("failed to create role: %v", err)
 	}
 
+	r.RedisClient.Del(ctx, fmt.Sprintf("roles:company:%s", input.CompanyID))
+
 	redisKey := fmt.Sprintf("role:%d", role.ID)
 
 	roleData, err := json.Marshal(role)
@@ -194,6 +196,8 @@ func (r *mutationResolver) CreateQuestion(ctx context.Context, input model.Creat
 		return nil, fmt.Errorf("failed to create question: %v", err)
 	}
 
+	r.RedisClient.Del(ctx, fmt.Sprintf("questions:company:%s", input.CompanyID))
+
 	redisKey := fmt.Sprintf("question:%d", question.ID)
 
 	questionData, err := json.Marshal(question)
@@ -236,6 +240,8 @@ func (r *mutationResolver) CreatePost(ctx context.Context, input model.CreatePos
 
 	redisKey := fmt.Sprintf("post:%d", post.ID)
 
+	r.RedisClient.Del(ctx, fmt.Sprintf("posts:company:%s", input.CompanyID))
+
 	postData, err := json.Marshal(post)
 
 	if err == nil {
@@ -260,13 +266,14 @@ func (r *mutationResolver) DeletePost(ctx context.Context, id string) (bool, err
 		return false, fmt.Errorf("post not found: %v", err)
 	}
 
+	companyID := post.CompanyID
+
 	if err := database.DB.Delete(post).Error; err != nil {
 		return false, fmt.Errorf("failed to delete post: %v", err)
 	}
 
-	redisKey := fmt.Sprintf(id)
-
-	r.RedisClient.Del(ctx, redisKey)
+	r.RedisClient.Del(ctx, fmt.Sprintf("post:%s", id))
+	r.RedisClient.Del(ctx, fmt.Sprintf("posts:company:%d", companyID))
 
 	return true, nil
 }
@@ -410,7 +417,7 @@ func (r *queryResolver) GetRolesByCompany(ctx context.Context, companyID string)
 			ID:        fmt.Sprintf("%d", role.ID),
 			RoleName:  strPtr(role.RoleName),
 			Year:      int32Ptr(role.Year),
-			CompanyID: fmt.Sprintf("%d", role.ID),
+			CompanyID: fmt.Sprintf("%d", role.CompanyID),
 			OfferType: strPtr(role.OfferType),
 			Cgpa:      float64Ptr(role.CGPA),
 			Other:     strPtr(role.Other),
@@ -504,7 +511,8 @@ func (r *queryResolver) GetPost(ctx context.Context, id string) (*model.Post, er
 
 // GetPostByCompany is the resolver for the getPostByCompany field.
 func (r *queryResolver) GetPostByCompany(ctx context.Context, companyID string) ([]*model.Post, error) {
-	if cachedCompanyPosts, err := r.RedisClient.Get(ctx, "posts:company").Result(); err == nil {
+	redisKey := fmt.Sprintf("posts:company:%s", companyID)
+	if cachedCompanyPosts, err := r.RedisClient.Get(ctx, redisKey).Result(); err == nil {
 		var posts []*model.Post
 		if err := json.Unmarshal([]byte(cachedCompanyPosts), &posts); err == nil {
 			return posts, nil
@@ -526,8 +534,6 @@ func (r *queryResolver) GetPostByCompany(ctx context.Context, companyID string) 
 			Content: strPtr(post.Content),
 		})
 	}
-
-	redisKey := "posts:company"
 
 	postsData, err := json.Marshal(result)
 
