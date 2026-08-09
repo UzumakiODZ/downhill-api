@@ -3,17 +3,18 @@ package database
 import (
 	"log"
 	"os"
+	"time"
 
+	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"github.com/joho/godotenv"
 )
 
 var DB *gorm.DB
 
-
 func init() {
-    godotenv.Load() 
+	// Silently ignore if .env isn't found (e.g. when deployed on Render)
+	_ = godotenv.Load()
 }
 
 func Connect() {
@@ -21,18 +22,28 @@ func Connect() {
 	if dsn == "" {
 		log.Fatal("DB_URL environment variable not set")
 	}
+
+	dialector := postgres.New(postgres.Config{
+		DSN:                  dsn,
+		PreferSimpleProtocol: true,
+	})
+
 	var err error
-
-	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
-
-
+	DB, err = gorm.Open(dialector, &gorm.Config{
+		PrepareStmt: false,
+	})
 	if err != nil {
-		log.Fatalf("Failed to migrate: %v", err)
+		log.Fatalf("Failed to connect to database: %v", err)
 	}
-	
+
+	sqlDB, err := DB.DB()
 	if err != nil {
-		log.Fatal("Failed to connect to database:", err)
+		log.Fatalf("Failed to retrieve standard sql.DB handle: %v", err)
 	}
+
+	sqlDB.SetMaxIdleConns(5)
+	sqlDB.SetMaxOpenConns(20)
+	sqlDB.SetConnMaxLifetime(30 * time.Minute)
+
 	log.Println("Database connection established")
 }
-
