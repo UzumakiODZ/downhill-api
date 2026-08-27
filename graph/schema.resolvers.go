@@ -457,8 +457,10 @@ func (r *queryResolver) GetQuestionsByCompany(ctx context.Context, companyID str
 	var result []*model.QuestionBank
 	for _, question := range questions {
 		result = append(result, &model.QuestionBank{
-			ID:       fmt.Sprintf("%d", question.ID),
-			Question: strPtr(question.Question),
+			ID:        fmt.Sprintf("%d", question.ID),
+			Question:  strPtr(question.Question),
+			CompanyID: fmt.Sprintf("%d", question.CompanyID),
+			Years:     int32Ptr(question.Years),
 		})
 	}
 
@@ -478,7 +480,8 @@ func (r *queryResolver) GetQuestionsByCompany(ctx context.Context, companyID str
 
 // GetPost is the resolver for the getPost field.
 func (r *queryResolver) GetPost(ctx context.Context, id string) (*model.Post, error) {
-	if cachedPost, err := r.RedisClient.Get(ctx, fmt.Sprintf(id)).Result(); err == nil {
+	redisKey := fmt.Sprintf("post:%s", id)
+	if cachedPost, err := r.RedisClient.Get(ctx, redisKey).Result(); err == nil {
 		var post *model.Post
 		if err := json.Unmarshal([]byte(cachedPost), &post); err == nil {
 			return post, nil
@@ -490,8 +493,6 @@ func (r *queryResolver) GetPost(ctx context.Context, id string) (*model.Post, er
 	if err := database.DB.First(post, id).Error; err != nil {
 		return nil, fmt.Errorf("post not found: %v", err)
 	}
-
-	redisKey := fmt.Sprintf(id)
 
 	postData, err := json.Marshal(post)
 
@@ -532,6 +533,10 @@ func (r *queryResolver) GetPostByCompany(ctx context.Context, companyID string) 
 			ID:      fmt.Sprintf("%d", post.ID),
 			Title:   strPtr(post.Title),
 			Content: strPtr(post.Content),
+			User: &model.User{
+				Username: post.User.Username,
+			},
+			CreatedAt: strPtr(post.CreatedAt.Format(time.RFC3339)),
 		})
 	}
 
@@ -606,7 +611,7 @@ func (r *queryResolver) GetCommentsByPost(ctx context.Context, postID string) ([
 			ID:      fmt.Sprintf("%d", c.ID),
 			Content: strPtr(c.Content),
 			PostID:  fmt.Sprintf("%d", c.PostID),
-			UserID:  fmt.Sprintf("%d", c.UserID),
+			
 		})
 	}
 

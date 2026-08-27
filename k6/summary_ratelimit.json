@@ -1,0 +1,154 @@
+{
+    "metrics": {
+        "http_req_duration": {
+            "avg": 3.3706899999999997,
+            "min": 1.483,
+            "med": 3.3696,
+            "max": 7.7569,
+            "p(90)": 4.65135,
+            "p(95)": 4.948985000000002
+        },
+        "ratelimit_429_count": {
+            "count": 10,
+            "rate": 33.64808877173372
+        },
+        "ratelimit_429_latency": {
+            "avg": 1.9137500000000003,
+            "min": 1.483,
+            "med": 1.97185,
+            "max": 2.3965,
+            "p(90)": 2.18545,
+            "p(95)": 2.2909749999999995
+        },
+        "http_req_blocked": {
+            "avg": 0.7373999999999999,
+            "min": 0,
+            "med": 0,
+            "max": 14.748,
+            "p(90)": 0,
+            "p(95)": 0.7374000000000105
+        },
+        "http_req_sending": {
+            "med": 0,
+            "max": 0,
+            "p(90)": 0,
+            "p(95)": 0,
+            "avg": 0,
+            "min": 0
+        },
+        "data_received": {
+            "count": 12870,
+            "rate": 43305.0902492213
+        },
+        "http_req_receiving": {
+            "avg": 0.11789000000000001,
+            "min": 0,
+            "med": 0,
+            "max": 0.6529,
+            "p(90)": 0.5462300000000001,
+            "p(95)": 0.6339
+        },
+        "iterations": {
+            "count": 20,
+            "rate": 67.29617754346744
+        },
+        "http_req_connecting": {
+            "avg": 0.027045000000000003,
+            "min": 0,
+            "med": 0,
+            "max": 0.5409,
+            "p(90)": 0,
+            "p(95)": 0.027045000000000388
+        },
+        "http_reqs": {
+            "count": 20,
+            "rate": 67.29617754346744
+        },
+        "data_sent": {
+            "count": 4900,
+            "rate": 16487.563498149524
+        },
+        "iteration_duration": {
+            "avg": 14.833375000000004,
+            "min": 12.281,
+            "med": 13.84285,
+            "max": 30.3006,
+            "p(90)": 15.617430000000006,
+            "p(95)": 19.337505000000007
+        },
+        "checks": {
+            "passes": 40,
+            "fails": 0,
+            "value": 1
+        },
+        "http_req_duration{expected_response:true}": {
+            "p(95)": 6.426834999999997,
+            "avg": 4.827630000000001,
+            "min": 4.3427,
+            "med": 4.5005,
+            "max": 7.7569,
+            "p(90)": 5.0967699999999985
+        },
+        "ratelimit_200_count": {
+            "count": 10,
+            "rate": 33.64808877173372
+        },
+        "http_req_tls_handshaking": {
+            "min": 0,
+            "med": 0,
+            "max": 0,
+            "p(90)": 0,
+            "p(95)": 0,
+            "avg": 0
+        },
+        "http_req_waiting": {
+            "p(95)": 4.705975000000002,
+            "avg": 3.2527999999999997,
+            "min": 1.483,
+            "med": 3.1122,
+            "max": 7.7569,
+            "p(90)": 4.52929
+        },
+        "http_req_failed": {
+            "passes": 10,
+            "fails": 10,
+            "value": 0.5
+        }
+    },
+    "root_group": {
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {},
+        "checks": {
+                "is 200 OK": {
+                    "id": "aaae3a9c5f2ea0bc5a097f71ebdd6c8c",
+                    "passes": 10,
+                    "fails": 0,
+                    "name": "is 200 OK",
+                    "path": "::is 200 OK"
+                },
+                "has RateLimit-Remaining header": {
+                    "name": "has RateLimit-Remaining header",
+                    "path": "::has RateLimit-Remaining header",
+                    "id": "64bc85ff1ad2e65986b0be3fc9186a50",
+                    "passes": 10,
+                    "fails": 0
+                },
+                "is 429 Too Many Requests": {
+                    "name": "is 429 Too Many Requests",
+                    "path": "::is 429 Too Many Requests",
+                    "id": "04284e1f98150bceee39312a64754cad",
+                    "passes": 10,
+                    "fails": 0
+                },
+                "has RateLimit-RetryAfter header": {
+                    "path": "::has RateLimit-RetryAfter header",
+                    "id": "e81fa00862a10d3b7d4ceb16b43574b7",
+                    "passes": 10,
+                    "fails": 0,
+                    "name": "has RateLimit-RetryAfter header"
+                }
+            }
+    }
+}
