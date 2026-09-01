@@ -33,6 +33,8 @@ type Role struct {
 type QuestionBank struct {
 	ID        uint   `gorm:"primaryKey"`
 	Question  string `gorm:"type:text"`
+	UserID    uint
+	User      User `gorm:"foreignKey:UserID;references:ID"`
 	CompanyID uint
 	Company   Company `gorm:"foreignKey:CompanyID;references:ID"`
 	Years     uint

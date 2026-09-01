@@ -108,15 +108,15 @@ type Query {
 
   getAllCompanies: [Company!]!
   getCompanyByID(companyId: ID!): Company!
+  getUserByID(userId: ID!): User!
   
   getRolesByCompany(companyId: ID!): [Role!]!
-  getQuestionsByCompany(companyId: ID!): [QuestionBank!]!
+  getQuestionsByCompany(companyId: ID!, offset: Int): [QuestionBank!]!
 
-  getPost(id: ID!): Post
-  getPostByCompany(companyId: ID!): [Post!]!
-  getAllPosts: [Post!]!
+  getPostByCompany(companyId: ID!, offset: Int): [Post!]!
+  getAllPosts(offset: Int): [Post!]!
 
-  getCommentsByPost(postId: ID!): [Comment!]!
+  getCommentsByPost(postId: ID!, offset: Int): [Comment!]!
 }
 
 type Mutation {
