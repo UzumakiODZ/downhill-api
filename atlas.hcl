@@ -10,9 +10,8 @@ data "external_schema" "gorm" {
 env "gorm" {
   src = data.external_schema.gorm.url
   
-  # Change this line:
-  dev = "postgres://postgres:mysecretpassword@127.0.0.1:5499/postgres?sslmode=disable"
-  url = "postgres://postgres:mysecretpassword@127.0.0.1:5499/postgres?sslmode=disable"
+  dev = try(getenv("DEV_DB_URL"), "docker://postgres/15/dev")
+  url = getenv("DB_URL")
 
   schemas = ["public"]
   
